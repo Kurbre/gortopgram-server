@@ -1,4 +1,4 @@
-import {BadRequestException, Injectable} from '@nestjs/common';
+import {BadRequestException, Injectable, NotFoundException} from '@nestjs/common';
 import {CreateUserInput} from './dto/create-user.input';
 import {UpdateUserInput} from './dto/update-user.input';
 import {Model} from "mongoose";
@@ -11,14 +11,14 @@ export class UsersService {
     constructor(@InjectModel(User.name) private readonly usersModel: Model<UserDocument>) {
     }
 
-    async create(createUserInput: CreateUserInput) {
+    async create(createUserInput: CreateUserInput): Promise<UserDocument> {
         const isThereUser = await this.usersModel.findOne({
             $or: [{
                 login: createUserInput.login,
                 email: createUserInput.email,
                 phoneNumber: createUserInput.phoneNumber
             }],
-        })
+        }).exec()
         if (isThereUser) throw new BadRequestException('Пользователь уже существует.')
 
         return this.usersModel.create({
@@ -27,12 +27,28 @@ export class UsersService {
         });
     }
 
-    findAll() {
-        return `This action returns all users`;
+    async findOne(email: string, login: string, phoneNumber: string): Promise<UserDocument> {
+        const user = await this.usersModel.findOne({
+            $or: [{login}, {email}, {phoneNumber}],
+        }).exec()
+        if (!user) throw new NotFoundException('Пользователь не найден.')
+
+        return user
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} user`;
+    async findOneAndSelectPassword(filter: string): Promise<UserDocument & {
+        password: string
+    }> {
+        const user = await this.usersModel.findOne({
+            $or: [{login: filter}, {email: filter}, {phoneNumber: filter}],
+        }).select('+password').exec()
+        if (!user) throw new NotFoundException('Пользователь не найден.')
+
+        return user
+    }
+
+    findAll() {
+        return `This action returns all users`;
     }
 
     update(id: number, updateUserInput: UpdateUserInput) {

@@ -6,13 +6,15 @@ import {join} from 'path'
 import {MongooseModule} from "@nestjs/mongoose";
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {mongoConfig} from "./configs/mongo.config";
-import { AuthModule } from './auth/auth.module';
+import {AuthModule} from './auth/auth.module';
+import {path} from "app-root-path";
 
 @Module({
     imports: [
         GraphQLModule.forRoot<ApolloDriverConfig>({
             driver: ApolloDriver,
-            autoSchemaFile: join(__dirname, './schema.graphql'),
+            autoSchemaFile: join(path, 'schemas/schema.graphql'),
+            context: ({req, res}) => ({req, res})
         }),
         MongooseModule.forRootAsync({
             imports: [ConfigModule],
